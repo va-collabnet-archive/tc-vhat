@@ -15,11 +15,11 @@
         <wb-toolkit.version>2.6.0-trek-145</wb-toolkit.version>
     </properties>
 
-    <!--scm>
-        <connection>scm:svn:https://csfe.aceworkspace.net/svn/repos/si-wb/trunk/vhatConvert</connection>
-        <developerConnection>scm:svn:https://csfe.aceworkspace.net/svn/repos/si-wb/trunk/vhatConvert</developerConnection>
-        <url>https://csfe.aceworkspace.net/integration/viewvc/viewvc.cgi/trunk/vhatConvert/?root=si-wb&amp;system=exsy1002</url>
-    </scm-->
+    <scm>
+        <connection>scm:svn:https://csfe.aceworkspace.net/svn/repos/va-oia-terminology-converters/vhat/trunk/</connection>
+        <developerConnection>scm:svn:https://csfe.aceworkspace.net/svn/repos/va-oia-terminology-converters/vhat/trunk/</developerConnection>
+        <url>https://csfe.aceworkspace.net/integration/viewvc/viewvc.cgi/vhat/trunk/?root=va-oia-terminology-converters&amp;system=exsy1002</url>
+    </scm>
 	
     <dependencyManagement>
         <dependencies>

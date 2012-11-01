@@ -11,7 +11,7 @@
 	<artifactId>vhat-data</artifactId>
 	<packaging>pom</packaging>
 	<name>vhat-data</name>
-    <version>2011.11.21-build-1</version>
+    <version>2012.10.04-build-1</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -54,7 +54,7 @@
 								<artifactItem>
 									<groupId>gov.va.oia.terminology.source.vhat</groupId>
 									<artifactId>vhat-src-data</artifactId>
-									<version>2011.11.21</version>
+									<version>2012.10.04</version>
 									<type>zip</type>
 								</artifactItem>
 							</artifactItems>

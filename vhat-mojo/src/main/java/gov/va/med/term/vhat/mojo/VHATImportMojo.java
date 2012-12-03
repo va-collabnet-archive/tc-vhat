@@ -42,7 +42,6 @@ import org.ihtsdo.tk.dto.concept.component.description.TkDescription;
 public class VHATImportMojo extends AbstractMojo {
 
     private Map<String, EConcept> typeMap = new HashMap<String, EConcept>();
-    private Map<Long, EConcept> subsetMap = new HashMap<Long, EConcept>();
     private Map<String, List<RelationshipImportDTO>> relationshipMap = null;
     private TerminologyDataReader importer_;
     private EConceptUtility eConceptUtil_;
@@ -94,9 +93,11 @@ public class VHATImportMojo extends AbstractMojo {
             		ConverterUUID.nameUUIDFromBytes(("gov.va.refset.VA Refsets").getBytes()), null);
             
             
-            EConcept properties = createType(dos, vhatMetadata.primordialUuid, "Properties");
-            EConcept descriptions = createType(dos, vhatMetadata.primordialUuid, "Descriptions");
-            EConcept relationships = createType(dos, vhatMetadata.primordialUuid, "Relationships");
+            EConcept properties = createType(dos, vhatMetadata.primordialUuid, "Attribute Types");
+            EConcept descriptions = createType(dos, vhatMetadata.primordialUuid, "Description Types");
+            EConcept relationships = createType(dos, vhatMetadata.primordialUuid, "Relationship Types");
+            EConcept contentVersion = createType(dos, vhatMetadata.primordialUuid, "Content Version");
+            EConcept idTypes = createType(dos, vhatMetadata.primordialUuid, "ID Types");
             
             EConcept subsetRefset = createType(dos, vaRefsets.primordialUuid, "VHAT Subsets");
 
@@ -119,13 +120,13 @@ public class VHATImportMojo extends AbstractMojo {
 
             // create all the subsets
             List<SubsetImportDTO> subsets = importer_.getSubsets();
-            for (SubsetImportDTO subset : subsets) {
-                subsetMap.put(subset.getVuid(), 
-                		createType(dos, 
-                				subsetRefset.getPrimordialUuid(), 
-                				subset.getSubsetName(),
-                				getSubsetUuid(subset.getVuid() + ""), 
-                				subsetMembershipMap.get(subset.getVuid())));
+            for (SubsetImportDTO subset : subsets) 
+            {
+	    		createType(dos, 
+	    				subsetRefset.getPrimordialUuid(), 
+	    				subset.getSubsetName(),
+	    				getSubsetUuid(subset.getVuid() + ""), 
+	    				subsetMembershipMap.get(subset.getVuid()));  //TODO this duplicates the subset info - it is also added to the concepts.  Do we want both?  Are they exact duplicates?
             }
 
             // create all the types for properties, descriptions and relationships
@@ -139,8 +140,8 @@ public class VHATImportMojo extends AbstractMojo {
                 }
             }
             
-            typeMap.put("ReleaseDate", createType(dos, properties.getPrimordialUuid(), "ReleaseDate"));
-            typeMap.put("VUID", createType(dos, ArchitectonicAuxiliary.Concept.ID_SOURCE.getPrimoridalUid(), "VUID"));
+            typeMap.put("ReleaseDate", createType(dos, contentVersion.getPrimordialUuid(), "ReleaseDate"));
+            typeMap.put("VUID", createType(dos, idTypes.getPrimordialUuid(), "VUID"));
             
             for (ConceptImportDTO item : items) {
                 writeEConcept(dos, item);
@@ -188,10 +189,7 @@ public class VHATImportMojo extends AbstractMojo {
         long time = System.currentTimeMillis();
         
         EConcept concept = eConceptUtil_.createConcept(getConceptUuid(conceptDto.getVuid().toString()), time, eConceptUtil_.statusCurrentUuid_);
- 
-        eConceptUtil_.addAdditionalIds(concept, conceptDto.getVuid().toString(), 
-    		   typeMap.get("VUID").getPrimordialUuid(),
-    		   false);
+        eConceptUtil_.addAdditionalIds(concept, conceptDto.getVuid().toString(), typeMap.get("VUID").getPrimordialUuid(), false);
         
 		for (PropertyImportDTO property : conceptDto.getProperties())
 		{
@@ -219,52 +217,47 @@ public class VHATImportMojo extends AbstractMojo {
             	bestDescription = designationImportDTO;
             }
             
-            TkDescription addedDescription = null;
+            if (designationImportDTO.getValueNew().equals("VHAT"))
+            {
+            	//On the root node, we need to add some extra attributes
+            	Version version = importer_.getVersion();
+            	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
+            			typeMap.get("ReleaseDate").getPrimordialUuid(), false);
+            }
 
             if (designationImportDTO.getTypeName().equals("Fully Specified Name"))
             {
             	fullySpecifiedNameAdded = true;
-            	addedDescription =  eConceptUtil_.addFullySpecifiedName(concept,
+            	eConceptUtil_.addFullySpecifiedName(concept,
             			getDescriptionUuid(designationImportDTO.getVuid().toString()),
             			designationImportDTO.getValueNew(), null);
             }
             else if (designationImportDTO.getTypeName().equals("Preferred Name")) 
             {
-            	addedDescription = eConceptUtil_.addSynonym(concept, 
-            			getDescriptionUuid(designationImportDTO.getVuid().toString()), 
-            			designationImportDTO.getValueNew(), true, null);
-            	
             	//This one is better
             	bestDescription = designationImportDTO;
-            	
-            	
-                if (designationImportDTO.getValueNew().equals("VHAT"))
-                {
-                	//On the root node, we need to add some extra attributes
-                	Version version = importer_.getVersion();
-                	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
-                			typeMap.get("ReleaseDate").getPrimordialUuid(), false);
-                }
             } 
-            else 
-            {
-            	addedDescription = eConceptUtil_.addDescription(concept,
-            			getDescriptionUuid(designationImportDTO.getVuid().toString()),
-            			designationImportDTO.getValueNew(), designationEConcept.getPrimordialUuid(), false);
-            }
+            
+            //I like to maintain the terminologies actual type naming for the descriptions as well
+            //This will duplicate the FSN and added above in those cases, but thats ok.
+            TkDescription addedDescription = eConceptUtil_.addDescription(concept,
+        			getDescriptionUuid(designationImportDTO.getVuid().toString()),
+        			designationImportDTO.getValueNew(), designationEConcept.getPrimordialUuid(), false);
  
+            //VHAT is kind of odd, in that the attributes are attached to the description, rather than the concept.
             for (PropertyImportDTO property : designationImportDTO.getProperties())
             {
     			eConceptUtil_.addStringAnnotation(addedDescription, property.getValueNew(), 
     					typeMap.get(property.getTypeName()).getPrimordialUuid(), false);
             }
             
+            //Same here, with the refset membership being attached to the description, rather than the concept.
             if (designationImportDTO.getSubsets() != null)
             {
             	for (SubsetMembershipImportDTO subset : designationImportDTO.getSubsets()) 
             	{
-            		eConceptUtil_.addUuidAnnotation(addedDescription, getSubsetUuid(subset.getVuid() + ""), subsetMap.get(subset.getVuid()).getPrimordialUuid());
+            		eConceptUtil_.addUuidAnnotation(addedDescription, null, getSubsetUuid(subset.getVuid() + ""));
             	}
             }
         }

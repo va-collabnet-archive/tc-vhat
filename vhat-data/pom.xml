@@ -11,7 +11,7 @@
 	<artifactId>vhat-data</artifactId>
 	<packaging>pom</packaging>
 	<name>vhat-data</name>
-    <version>2012.10.04-build-1</version>
+    <version>2012.11.13-build-1</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -54,7 +54,7 @@
 								<artifactItem>
 									<groupId>gov.va.oia.terminology.source.vhat</groupId>
 									<artifactId>vhat-src-data</artifactId>
-									<version>2012.10.04</version>
+									<version>2012.11.13</version>
 									<type>zip</type>
 								</artifactItem>
 							</artifactItems>
@@ -73,7 +73,7 @@
 						<id>convert-VHAT-to-jbin</id>
 						<configuration>
 							<!-- Use this to process a local file (optionally, comment out the fetch VHAT XML data section above as well) -->
-							<!--<inputFile>${project.basedir}/../../../Source Data/VHAT 20111121.xml</inputFile>-->
+							<!--<inputFile>/mnt/d/Documents/Desktop/vhat.xml</inputFile>-->
 
 							<!-- Use this to process whatever XML file comes out of the zip file found in the fetch-VHAT-XML-data process -->
 							<inputFile>${project.build.directory}/generated-resources/xml</inputFile>

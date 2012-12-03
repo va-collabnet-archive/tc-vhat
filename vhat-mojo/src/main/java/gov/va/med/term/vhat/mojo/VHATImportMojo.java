@@ -17,6 +17,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,6 +46,10 @@ public class VHATImportMojo extends AbstractMojo {
     private Map<String, List<RelationshipImportDTO>> relationshipMap = null;
     private TerminologyDataReader importer_;
     private EConceptUtility eConceptUtil_;
+    
+    private HashMap<String, String> referencedConcepts = new HashMap<String, String>();
+    private HashMap<String, String> loadedConcepts = new HashMap<String, String>();
+    private UUID rootConceptUUID;
     
     /**
      * Where to put the output file.
@@ -146,6 +151,31 @@ public class VHATImportMojo extends AbstractMojo {
             for (ConceptImportDTO item : items) {
                 writeEConcept(dos, item);
             }
+            
+            ArrayList<String> missingConcepts = new ArrayList<String>();
+            
+            for (String refUUID : referencedConcepts.keySet())
+            {
+            	if (loadedConcepts.get(refUUID) == null)
+            	{
+            		missingConcepts.add(refUUID);
+            		System.err.println("Data error - The concept " + refUUID + " - " + referencedConcepts.get(refUUID) + " was referenced, but not loaded - will be created as '-MISSING-'");
+            	}
+            }
+            
+            if (missingConcepts.size() > 0)
+            {
+            	EConcept missingParent = eConceptUtil_.createConcept("Missing Concepts", "Missing Concepts");
+            	eConceptUtil_.addRelationship(missingParent, rootConceptUUID, null,  null);
+            	missingParent.writeExternal(dos);
+	            for (String refUUID : missingConcepts)
+	            {
+	            	EConcept c = eConceptUtil_.createConcept(UUID.fromString(refUUID), "-MISSING-", null);
+	            	eConceptUtil_.addRelationship(c, missingParent.getPrimordialUuid(), null,  null);
+	            	c.writeExternal(dos);
+	            }
+            }
+            
             dos.flush();
             dos.close();
             
@@ -181,7 +211,6 @@ public class VHATImportMojo extends AbstractMojo {
         {
         	System.err.println(conceptsWithNoDesignations + " concepts were found with no descriptions at all.  These were assigned '-MISSING-'");
         }
-
     }
 
     public void writeEConcept(DataOutputStream dos,ConceptImportDTO conceptDto) throws Exception 
@@ -189,6 +218,7 @@ public class VHATImportMojo extends AbstractMojo {
         long time = System.currentTimeMillis();
         
         EConcept concept = eConceptUtil_.createConcept(getConceptUuid(conceptDto.getVuid().toString()), time, eConceptUtil_.statusCurrentUuid_);
+        loadedConcepts.put(concept.getPrimordialUuid().toString(), conceptDto.getVuid().toString());
         eConceptUtil_.addAdditionalIds(concept, conceptDto.getVuid().toString(), typeMap.get("VUID").getPrimordialUuid(), false);
         
 		for (PropertyImportDTO property : conceptDto.getProperties())
@@ -224,6 +254,7 @@ public class VHATImportMojo extends AbstractMojo {
             	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
             			typeMap.get("ReleaseDate").getPrimordialUuid(), false);
+            	rootConceptUUID = concept.getPrimordialUuid();
             }
 
             if (designationImportDTO.getTypeName().equals("Fully Specified Name"))
@@ -286,6 +317,9 @@ public class VHATImportMojo extends AbstractMojo {
                 UUID sourceUuid = getConceptUuid(relationshipImportDTO.getSourceCode());
                 UUID targetUuid = getConceptUuid(relationshipImportDTO.getNewTargetCode());
                 UUID typeUuid = typeMap.get(relationshipImportDTO.getTypeName()).getPrimordialUuid();
+                
+                referencedConcepts.put(targetUuid.toString(), relationshipImportDTO.getNewTargetCode());
+                referencedConcepts.put(typeUuid.toString(), relationshipImportDTO.getTypeName());
 
                 if (!sourceUuid.equals(concept.getPrimordialUuid()))
                 {
@@ -301,6 +335,7 @@ public class VHATImportMojo extends AbstractMojo {
 
     public EConcept createType(DataOutputStream dos, UUID parentUuid, String typeName) throws Exception {
     	 EConcept concept = eConceptUtil_.createConcept(typeName, typeName);
+    	 loadedConcepts.put(concept.getPrimordialUuid().toString(), typeName);
          eConceptUtil_.addRelationship(concept, parentUuid, null, null);
          concept.writeExternal(dos);
          return concept;
@@ -310,7 +345,7 @@ public class VHATImportMojo extends AbstractMojo {
     		Set<Long> refsetMembership) throws Exception 
     {
         EConcept concept = eConceptUtil_.createConcept(typeUuid, typeName, null, eConceptUtil_.statusCurrentUuid_);
-        
+        loadedConcepts.put(concept.getPrimordialUuid().toString(), typeName);
         eConceptUtil_.addRelationship(concept, parentUuid, null, null);
 
         if (refsetMembership != null) 

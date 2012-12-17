@@ -67,6 +67,15 @@ public class VHATImportMojo extends AbstractMojo {
      */
     private File inputFile;
     
+	/**
+	 * Loader version number
+	 * Use parent because project.version pulls in the version of the data file, which I don't want.
+	 * 
+	 * @parameter expression="${project.parent.version}"
+	 * @required
+	 */
+	private String loaderVersion;
+    
     private int conceptsWithNoDesignations = 0;
     
     private String uuidRoot_ = "gov.va.med.term.vhat:";
@@ -145,7 +154,8 @@ public class VHATImportMojo extends AbstractMojo {
                 }
             }
             
-            typeMap.put("ReleaseDate", createType(dos, contentVersion.getPrimordialUuid(), "ReleaseDate"));
+            typeMap.put("releaseDate", createType(dos, contentVersion.getPrimordialUuid(), "releaseDate"));
+            typeMap.put("loaderVersion", createType(dos, contentVersion.getPrimordialUuid(), "loaderVersion"));
             typeMap.put("VUID", createType(dos, idTypes.getPrimordialUuid(), "VUID"));
             
             for (ConceptImportDTO item : items) {
@@ -253,7 +263,9 @@ public class VHATImportMojo extends AbstractMojo {
             	Version version = importer_.getVersion();
             	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
-            			typeMap.get("ReleaseDate").getPrimordialUuid(), false);
+            			typeMap.get("releaseDate").getPrimordialUuid(), false);
+            	eConceptUtil_.addStringAnnotation(concept, loaderVersion, 
+            			typeMap.get("loaderVersion").getPrimordialUuid(), false);
             	rootConceptUUID = concept.getPrimordialUuid();
             }
 

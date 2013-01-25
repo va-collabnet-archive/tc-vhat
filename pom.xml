@@ -72,6 +72,6 @@
     
     <modules>
         <module>vhat-mojo</module>
-        <module>vhat-data</module>
+        <module>vhat-econcept</module>
     </modules>
 </project>

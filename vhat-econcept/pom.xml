@@ -8,9 +8,9 @@
 		<version>1.4</version>
 	</parent>
     
-	<artifactId>vhat-data</artifactId>
+	<artifactId>vhat-econcept</artifactId>
 	<packaging>pom</packaging>
-	<name>vhat-data</name>
+	<name>vhat-econcept</name>
     <!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
     <version>2012.11.13-loader-1.4</version>
 
@@ -45,7 +45,7 @@
 				<artifactId>maven-dependency-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>fetch-VHAT-XML-data</id>
+						<id>fetch-VHAT-XML-src-data</id>
 						<phase>generate-sources</phase>
 						<goals>
 							<goal>unpack</goal>

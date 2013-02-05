@@ -1,44 +1,33 @@
 package gov.va.med.term.vhat.propertyTypes;
 
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_IDs;
-import java.util.UUID;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 
 public class PT_IDs extends BPT_IDs
 {
-	public enum IDs
+	public enum ID
 	{
 		VUID("VUID"); 
 
-		private String niceName;
-		private PT_IDs pt_ids;
-		private IDs(String niceName)
-		{
-			this.niceName = niceName;
-		}
-		
-		public String getNiceName()
-		{
-			return this.niceName;
-		}
-		
-		protected void setPropertyOwner(PT_IDs pt_ids)
-		{
-			this.pt_ids = pt_ids;
-		}
-		
-		public UUID getUUID()
-		{
-			return pt_ids.getPropertyUUID(this.niceName);
-		}
+		private Property property;
+        private ID(String niceName)
+        {
+            //Don't know the owner yet - will be autofilled when we add this to the parent, below.
+            property = new Property(null, niceName);
+        }
+        
+        public Property getProperty()
+        {
+            return property;
+        }
 	}
 
 	public PT_IDs(String uuidRoot)
 	{
 		super(uuidRoot);
-		for (IDs ids : IDs.values())
-		{
-			addPropertyName(ids.getNiceName());
-			ids.setPropertyOwner(this);
-		}
+		for (ID id : ID.values())
+        {
+            addProperty(id.getProperty());
+        }
 	}
 }

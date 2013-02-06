@@ -11,10 +11,11 @@ import gov.va.med.term.vhat.data.dto.TypeImportDTO;
 import gov.va.med.term.vhat.data.dto.Version;
 import gov.va.med.term.vhat.propertyTypes.PT_Attributes;
 import gov.va.med.term.vhat.propertyTypes.PT_Attributes.Attribute;
+import gov.va.med.term.vhat.propertyTypes.PT_ContentVersion;
+import gov.va.med.term.vhat.propertyTypes.PT_ContentVersion.ContentVersion;
 import gov.va.med.term.vhat.propertyTypes.PT_IDs;
 import gov.va.oia.terminology.converters.sharedUtils.ConsoleUtil;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility;
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_ContentVersion;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_ContentVersion.BaseContentVersion;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descriptions;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Relations;
@@ -86,6 +87,14 @@ public class VHATImportMojo extends AbstractMojo
 	 * @required
 	 */
 	private String loaderVersion;
+	
+	/**
+     * Content version number
+     * 
+     * @parameter expression="${project.version}"
+     * @required
+     */
+    private String releaseVersion;
     
     private int conceptsWithNoDesignations = 0;
     private String uuidRoot_ = "gov.va.med.term.vhat:";
@@ -96,7 +105,7 @@ public class VHATImportMojo extends AbstractMojo
         attributes_ = new PT_Attributes(uuidRoot_);
         descriptions_ = new BPT_Descriptions(uuidRoot_);
         relationships_ = new BPT_Relations(uuidRoot_);
-        contentVersion_ = new BPT_ContentVersion(uuidRoot_);
+        contentVersion_ = new PT_ContentVersion(uuidRoot_);
         
         File f = outputDirectory;
 
@@ -290,9 +299,9 @@ public class VHATImportMojo extends AbstractMojo
             	Version version = importer_.getVersion();
             	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
-            			 BaseContentVersion.RELEASE.getProperty().getUUID(), false);
-            	eConceptUtil_.addStringAnnotation(concept, loaderVersion, 
-            	        BaseContentVersion.LOADER_VERSION.getProperty().getUUID(), false);
+            			 ContentVersion.RELEASE_DATE.getProperty().getUUID(), false);
+            	eConceptUtil_.addStringAnnotation(concept, releaseVersion, BaseContentVersion.RELEASE.getProperty().getUUID(), false);
+            	eConceptUtil_.addStringAnnotation(concept, loaderVersion, BaseContentVersion.LOADER_VERSION.getProperty().getUUID(), false);
             	rootConceptUUID = concept.getPrimordialUuid();
             }
 

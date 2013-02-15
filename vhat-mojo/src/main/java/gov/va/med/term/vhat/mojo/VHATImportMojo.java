@@ -3,6 +3,8 @@ package gov.va.med.term.vhat.mojo;
 import gov.va.med.term.vhat.data.TerminologyDataReader;
 import gov.va.med.term.vhat.data.dto.ConceptImportDTO;
 import gov.va.med.term.vhat.data.dto.DesignationImportDTO;
+import gov.va.med.term.vhat.data.dto.MapEntryImportDTO;
+import gov.va.med.term.vhat.data.dto.MapSetImportDTO;
 import gov.va.med.term.vhat.data.dto.PropertyImportDTO;
 import gov.va.med.term.vhat.data.dto.RelationshipImportDTO;
 import gov.va.med.term.vhat.data.dto.SubsetImportDTO;
@@ -25,6 +27,7 @@ import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,7 +99,9 @@ public class VHATImportMojo extends AbstractMojo
      */
     private String releaseVersion;
     
-    private int conceptsWithNoDesignations = 0;
+    private HashSet<Long> conceptsWithNoDesignations = new HashSet<Long>();
+    private int mapEntryCount = 0;
+    private int mapSetCount = 0;
     private String uuidRoot_ = "gov.va.med.term.vhat:";
 
     public void execute() throws MojoExecutionException 
@@ -210,7 +215,7 @@ public class VHATImportMojo extends AbstractMojo
             	if (loadedConcepts.get(refUUID) == null)
             	{
             		missingConcepts.add(refUUID);
-            		System.err.println("Data error - The concept " + refUUID + " - " + referencedConcepts.get(refUUID) + " was referenced, but not loaded - will be created as '-MISSING-'");
+            		ConsoleUtil.printErrorln("Data error - The concept " + refUUID + " - " + referencedConcepts.get(refUUID) + " was referenced, but not loaded - will be created as '-MISSING-'");
             	}
             }
             
@@ -227,6 +232,15 @@ public class VHATImportMojo extends AbstractMojo
 	            }
             }
             
+            if (mapEntryCount > 0)
+            {
+                ConsoleUtil.println("Skipped " + mapEntryCount + " MapEntry objects");
+            }
+            if (mapSetCount > 0)
+            {
+                ConsoleUtil.println("Skipped " + mapSetCount + " MapSet objects");
+            }
+            
             dos.flush();
             dos.close();
             
@@ -237,7 +251,7 @@ public class VHATImportMojo extends AbstractMojo
                 stringsToSwap.put(subset.getVuid() + "", subset.getSubsetName());
             }
             
-            System.out.println("Load Statistics");
+            ConsoleUtil.println("Load Statistics");
             //swap out vuids with names to make it more readable...
             for (String line : eConceptUtil_.getLoadStats().getSummary())
             {
@@ -247,151 +261,171 @@ public class VHATImportMojo extends AbstractMojo
             		String current = e.nextElement();
             		line = line.replaceAll(current, stringsToSwap.get(current));
             	}
-            	System.out.println(line);
+            	ConsoleUtil.println(line);
             }
             
     		//this could be removed from final release.  Just added to help debug editor problems.
     		ConsoleUtil.println("Dumping UUID Debug File");
     		ConverterUUID.dump(new File(outputDirectory, "vhatUuidDebugMap.txt"));
     		
+    		if (conceptsWithNoDesignations.size() > 0)
+            {
+    		    ConsoleUtil.printErrorln(conceptsWithNoDesignations.size() + " concepts were found with no descriptions at all.  These were assigned '-MISSING-'");
+                FileWriter fw = new FileWriter(new File(outputDirectory, "NoDesignations.txt"));
+                for (Long l : conceptsWithNoDesignations)
+                {
+                    fw.write(l.toString());
+                    fw.write(System.getProperty("line.separator"));
+                }
+                fw.close();
+            }
+    		
         } catch (Exception ex) {
             throw new MojoExecutionException(ex.getLocalizedMessage(), ex);
         }
 
-        if (conceptsWithNoDesignations > 0)
-        {
-        	System.err.println(conceptsWithNoDesignations + " concepts were found with no descriptions at all.  These were assigned '-MISSING-'");
-        }
     }
 
     public void writeEConcept(DataOutputStream dos,ConceptImportDTO conceptDto) throws Exception 
     {
-        long time = System.currentTimeMillis();
-        
-        EConcept concept = eConceptUtil_.createConcept(getConceptUuid(conceptDto.getVuid().toString()), time, eConceptUtil_.statusCurrentUuid_);
-        loadedConcepts.put(concept.getPrimordialUuid().toString(), conceptDto.getVuid().toString());
-        eConceptUtil_.addAdditionalIds(concept, conceptDto.getVuid().toString(), ids_.getProperty("VUID").getUUID(), false);
-        
-		for (PropertyImportDTO property : conceptDto.getProperties())
-		{
-			eConceptUtil_.addStringAnnotation(concept, property.getValueNew(), attributes_.getProperty(property.getTypeName()).getUUID(), false);
-		}
-
-        List<DesignationImportDTO> designationDto = conceptDto.getDesignations();
-        boolean fullySpecifiedNameAdded = false;
-        DesignationImportDTO bestDescription = null;
-        for (DesignationImportDTO designationImportDTO : designationDto) 
+        if (conceptDto instanceof MapEntryImportDTO)
         {
-            if (designationImportDTO.getValueNew() == null) 
-            {
-                throw new MojoExecutionException("Description is null for concept: " + conceptDto.getName());
-            }
-        	
-            if (bestDescription == null)
-            {
-            	//Make sure we have something....
-            	bestDescription = designationImportDTO;
-            }
+            mapEntryCount++;
+        }
+        else if (conceptDto instanceof MapSetImportDTO)
+        {
+            mapSetCount++;
+        }
+        else
+        {
+            long time = System.currentTimeMillis();
             
-            if (designationImportDTO.getValueNew().equals("VHAT"))
-            {
-            	//On the root node, we need to add some extra attributes
-            	Version version = importer_.getVersion();
-            	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
-            			 ContentVersion.RELEASE_DATE.getProperty().getUUID(), false);
-            	eConceptUtil_.addStringAnnotation(concept, releaseVersion, BaseContentVersion.RELEASE.getProperty().getUUID(), false);
-            	eConceptUtil_.addStringAnnotation(concept, loaderVersion, BaseContentVersion.LOADER_VERSION.getProperty().getUUID(), false);
-            	rootConceptUUID = concept.getPrimordialUuid();
-            }
-
-            if (designationImportDTO.getTypeName().equals("Fully Specified Name"))
-            {
-            	fullySpecifiedNameAdded = true;
-            	TkDescription fsn = eConceptUtil_.addFullySpecifiedName(concept,
-            			designationImportDTO.getValueNew(), null);  //Let it generate a UUID for this one - don't want to collide with the second copy below
-            	eConceptUtil_.addAdditionalIds(fsn, designationImportDTO.getVuid(), ids_.getProperty("VUID").getUUID());
-            }
-            else if (designationImportDTO.getTypeName().equals("Preferred Name")) 
-            {
-            	//This one is better
-            	bestDescription = designationImportDTO;
-            } 
+            EConcept concept = eConceptUtil_.createConcept(getConceptUuid(conceptDto.getVuid().toString()), time, eConceptUtil_.statusCurrentUuid_);
+            loadedConcepts.put(concept.getPrimordialUuid().toString(), conceptDto.getVuid().toString());
+            eConceptUtil_.addAdditionalIds(concept, conceptDto.getVuid().toString(), ids_.getProperty("VUID").getUUID(), false);
             
-            //I like to maintain the terminologies actual type naming for the descriptions as well
-            //This will duplicate the FSN and added above in those cases, but thats ok.
-            TkDescription addedDescription = eConceptUtil_.addDescription(concept,
-        			getDescriptionUuid(designationImportDTO.getVuid().toString()),
-        			designationImportDTO.getValueNew(), descriptions_.getProperty(designationImportDTO.getTypeName()).getUUID(), false);
-            eConceptUtil_.addAdditionalIds(addedDescription, designationImportDTO.getVuid(), ids_.getProperty("VUID").getUUID());
- 
-            //VHAT is kind of odd, in that the attributes are attached to the description, rather than the concept.
-            for (PropertyImportDTO property : designationImportDTO.getProperties())
+    		for (PropertyImportDTO property : conceptDto.getProperties())
+    		{
+    			eConceptUtil_.addStringAnnotation(concept, property.getValueNew(), attributes_.getProperty(property.getTypeName()).getUUID(), false);
+    		}
+    
+            List<DesignationImportDTO> designationDto = conceptDto.getDesignations();
+            boolean fullySpecifiedNameAdded = false;
+            DesignationImportDTO bestDescription = null;
+            for (DesignationImportDTO designationImportDTO : designationDto) 
             {
-                //Move these up, retype as a description
-                if (property.getTypeName().equals("Search_Term"))
+                if (designationImportDTO.getValueNew() == null) 
                 {
-                    TkDescription searchTermDesc = eConceptUtil_.addDescription(concept, property.getValueNew(), 
-                            descriptions_.getProperty(property.getTypeName()).getUUID(), false);
-                    //Annotate which description it came from
-                    eConceptUtil_.addStringAnnotation(searchTermDesc, designationImportDTO.getVuid() + "",
-                            Attribute.SOURCE_DESCRIPTION_VUID.getProperty().getUUID(), false);
+                    throw new MojoExecutionException("Description is null for concept: " + conceptDto.getName());
                 }
-                else
+            	
+                if (bestDescription == null)
                 {
-                    eConceptUtil_.addStringAnnotation(addedDescription, property.getValueNew(), 
-    					attributes_.getProperty(property.getTypeName()).getUUID(), false);
+                	//Make sure we have something....
+                	bestDescription = designationImportDTO;
+                }
+                
+                //TODO set active / inactive on each designation
+                if (designationImportDTO.getValueNew().equals("VHAT"))
+                {
+                	//On the root node, we need to add some extra attributes
+                	Version version = importer_.getVersion();
+                	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                	eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), 
+                			 ContentVersion.RELEASE_DATE.getProperty().getUUID(), false);
+                	eConceptUtil_.addStringAnnotation(concept, releaseVersion, BaseContentVersion.RELEASE.getProperty().getUUID(), false);
+                	eConceptUtil_.addStringAnnotation(concept, loaderVersion, BaseContentVersion.LOADER_VERSION.getProperty().getUUID(), false);
+                	rootConceptUUID = concept.getPrimordialUuid();
+                }
+    
+                if (designationImportDTO.getTypeName().equals("Fully Specified Name"))
+                {
+                	fullySpecifiedNameAdded = true;
+                	TkDescription fsn = eConceptUtil_.addFullySpecifiedName(concept,
+                			designationImportDTO.getValueNew(), null);  //Let it generate a UUID for this one - don't want to collide with the second copy below
+                	eConceptUtil_.addAdditionalIds(fsn, designationImportDTO.getVuid(), ids_.getProperty("VUID").getUUID());
+                }
+                else if (designationImportDTO.getTypeName().equals("Preferred Name")) 
+                {
+                	//This one is better
+                	bestDescription = designationImportDTO;
+                } 
+                
+                //I like to maintain the terminologies actual type naming for the descriptions as well
+                //This will duplicate the FSN and added above in those cases, but thats ok.
+                TkDescription addedDescription = eConceptUtil_.addDescription(concept,
+            			getDescriptionUuid(designationImportDTO.getVuid().toString()),
+            			designationImportDTO.getValueNew(), descriptions_.getProperty(designationImportDTO.getTypeName()).getUUID(), false);
+                eConceptUtil_.addAdditionalIds(addedDescription, designationImportDTO.getVuid(), ids_.getProperty("VUID").getUUID());
+     
+                //VHAT is kind of odd, in that the attributes are attached to the description, rather than the concept.
+                for (PropertyImportDTO property : designationImportDTO.getProperties())
+                {
+                    //Move these up, retype as a description
+                    if (property.getTypeName().equals("Search_Term"))
+                    {
+                        TkDescription searchTermDesc = eConceptUtil_.addDescription(concept, property.getValueNew(), 
+                                descriptions_.getProperty(property.getTypeName()).getUUID(), false);
+                        //Annotate which description it came from
+                        eConceptUtil_.addStringAnnotation(searchTermDesc, designationImportDTO.getVuid() + "",
+                                Attribute.SOURCE_DESCRIPTION_VUID.getProperty().getUUID(), false);
+                    }
+                    else
+                    {
+                        eConceptUtil_.addStringAnnotation(addedDescription, property.getValueNew(), 
+        					attributes_.getProperty(property.getTypeName()).getUUID(), false);
+                    }
+                }
+                
+                //Same here, with the refset membership being attached to the description, rather than the concept.
+                if (designationImportDTO.getSubsets() != null)
+                {
+                	for (SubsetMembershipImportDTO subset : designationImportDTO.getSubsets()) 
+                	{
+                		eConceptUtil_.addUuidAnnotation(addedDescription, null, getSubsetUuid(subset.getVuid() + ""));
+                	}
                 }
             }
             
-            //Same here, with the refset membership being attached to the description, rather than the concept.
-            if (designationImportDTO.getSubsets() != null)
+            if (!fullySpecifiedNameAdded)
             {
-            	for (SubsetMembershipImportDTO subset : designationImportDTO.getSubsets()) 
+            	if (bestDescription != null)
             	{
-            		eConceptUtil_.addUuidAnnotation(addedDescription, null, getSubsetUuid(subset.getVuid() + ""));
+    	        	//The workbench implodes if you don't have a fully specified name....
+    	        	eConceptUtil_.addFullySpecifiedName(concept, bestDescription.getValueNew(), null);
+            	}
+            	else
+            	{
+            		//Seems like a data error - but it is happening... no descriptions at all.....
+            		conceptsWithNoDesignations.add(conceptDto.getVuid());
+    	        	//The workbench implodes if you don't have a fully specified name....
+    	        	eConceptUtil_.addFullySpecifiedName(concept, "-MISSING-", null);
             	}
             }
-        }
-        
-        if (!fullySpecifiedNameAdded)
-        {
-        	if (bestDescription != null)
-        	{
-	        	//The workbench implodes if you don't have a fully specified name....
-	        	eConceptUtil_.addFullySpecifiedName(concept, bestDescription.getValueNew(), null);
-        	}
-        	else
-        	{
-        		//Seems like a data error - but it is happening... no descriptions at all.....
-        		conceptsWithNoDesignations++;
-	        	//The workbench implodes if you don't have a fully specified name....
-	        	eConceptUtil_.addFullySpecifiedName(concept, "-MISSING-", null);
-        	}
-        }
-
-        List<RelationshipImportDTO> relationshipImports = relationshipMap.get(conceptDto.getCode());
-        if (relationshipImports != null) 
-        {
-            for (RelationshipImportDTO relationshipImportDTO : relationshipImports) 
+    
+            List<RelationshipImportDTO> relationshipImports = relationshipMap.get(conceptDto.getCode());
+            if (relationshipImports != null) 
             {
-                UUID sourceUuid = getConceptUuid(relationshipImportDTO.getSourceCode());
-                UUID targetUuid = getConceptUuid(relationshipImportDTO.getNewTargetCode());
-                UUID typeUuid = relationships_.getProperty(relationshipImportDTO.getTypeName()).getUUID();
-                
-                referencedConcepts.put(targetUuid.toString(), relationshipImportDTO.getNewTargetCode());
-
-                if (!sourceUuid.equals(concept.getPrimordialUuid()))
+                for (RelationshipImportDTO relationshipImportDTO : relationshipImports) 
                 {
-                	throw new MojoExecutionException("Design failure!");
+                    UUID sourceUuid = getConceptUuid(relationshipImportDTO.getSourceCode());
+                    UUID targetUuid = getConceptUuid(relationshipImportDTO.getNewTargetCode());
+                    UUID typeUuid = relationships_.getProperty(relationshipImportDTO.getTypeName()).getUUID();
+                    
+                    referencedConcepts.put(targetUuid.toString(), relationshipImportDTO.getNewTargetCode());
+    
+                    if (!sourceUuid.equals(concept.getPrimordialUuid()))
+                    {
+                    	throw new MojoExecutionException("Design failure!");
+                    }
+                    
+                    eConceptUtil_.addRelationship(concept, targetUuid, typeUuid, time);
                 }
-                
-                eConceptUtil_.addRelationship(concept, targetUuid, typeUuid, time);
             }
+            
+            eConceptUtil_.addRefsetMember(allVhatConceptsRefset, concept.getPrimordialUuid(), true, time);
+            concept.writeExternal(dos);
         }
-        
-        eConceptUtil_.addRefsetMember(allVhatConceptsRefset, concept.getPrimordialUuid(), true, time);
-        concept.writeExternal(dos);
     }
 
     public EConcept createType(DataOutputStream dos, UUID parentUuid, String typeName) throws Exception {
@@ -440,8 +474,8 @@ public class VHATImportMojo extends AbstractMojo
     public static void main(String[] args) throws MojoExecutionException
     {
     	VHATImportMojo i = new VHATImportMojo();
-    	i.outputDirectory = new File("../vhat-data/target");
-    	i.inputFile = new File("../vhat-data/target/generated-resources/xml/VHAT 20121113.xml");
+    	i.outputDirectory = new File("../vhat-econcept/target");
+    	i.inputFile = new File("../vhat-econcept/target/generated-resources/xml/");
     	i.execute();
     }
 }

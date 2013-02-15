@@ -12,10 +12,10 @@
 	<packaging>pom</packaging>
 	<name>vhat-econcept</name>
     <!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
-    <version>2012.11.13-loader-1.5</version>
+    <version>2013.02.11-loader-1.5</version>
 
 	<properties>
-		<sourceData.version>2012.11.13</sourceData.version>
+		<sourceData.version>2013.02.11</sourceData.version>
 	</properties>
 
 	<build>

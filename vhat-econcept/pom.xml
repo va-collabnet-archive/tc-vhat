@@ -1,18 +1,16 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>gov.va.oia.terminology.converters</groupId>
 		<artifactId>vhat</artifactId>
 		<version>1.5</version>
 	</parent>
-    
+
 	<artifactId>vhat-econcept</artifactId>
 	<packaging>pom</packaging>
 	<name>vhat-econcept</name>
     <!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
-    <version>2013.02.11-loader-1.5</version>
+	<version>2013.02.11-loader-1.5</version>
 
 	<properties>
 		<sourceData.version>2013.02.11</sourceData.version>
@@ -68,7 +66,7 @@
 			<plugin>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>vhat-mojo</artifactId>
-                <version>${project.parent.version}</version>
+				<version>${project.parent.version}</version>
 				<executions>
 					<execution>
 						<id>convert-VHAT-to-jbin</id>

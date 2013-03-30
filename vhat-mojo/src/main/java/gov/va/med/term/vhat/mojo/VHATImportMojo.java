@@ -285,7 +285,7 @@ public class VHATImportMojo extends AbstractMojo
 				}
 				fw.close();
 			}
-
+			ConsoleUtil.writeOutputToFile(new File(outputDirectory, "ConsoleOutput.txt").toPath());
 		}
 		catch (Exception ex)
 		{

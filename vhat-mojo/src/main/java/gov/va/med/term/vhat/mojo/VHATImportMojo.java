@@ -106,8 +106,6 @@ public class VHATImportMojo extends AbstractMojo
 
 	public void execute() throws MojoExecutionException
 	{
-		//The way this converter is structured, can't leave this feature enabled
-		ConverterUUID.enableDupeUUIDException = false;
 		ids_ = new PT_IDs(uuidRoot_);
 		attributes_ = new PT_Attributes(uuidRoot_);
 		descriptions_ = new BPT_Descriptions(uuidRoot_);

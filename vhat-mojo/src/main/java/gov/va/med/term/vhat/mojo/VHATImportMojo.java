@@ -245,7 +245,7 @@ public class VHATImportMojo extends AbstractMojo
 
 			if (missingConcepts.size() > 0)
 			{
-				EConcept missingParent = eConceptUtil_.createConcept("Missing Concepts", "Missing Concepts");
+				EConcept missingParent = eConceptUtil_.createConcept("Missing Concepts");
 				eConceptUtil_.addRelationship(missingParent, rootConceptUUID);
 				missingParent.writeExternal(dos);
 				for (String refUUID : missingConcepts)
@@ -432,7 +432,7 @@ public class VHATImportMojo extends AbstractMojo
 
 	public EConcept createType(DataOutputStream dos, UUID parentUuid, String typeName) throws Exception
 	{
-		EConcept concept = eConceptUtil_.createConcept(typeName, typeName);
+		EConcept concept = eConceptUtil_.createConcept(typeName);
 		loadedConcepts.put(concept.getPrimordialUuid().toString(), typeName);
 		eConceptUtil_.addRelationship(concept, parentUuid);
 		concept.writeExternal(dos);

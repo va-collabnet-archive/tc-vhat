@@ -23,9 +23,9 @@ public class PT_Attributes extends BPT_Attributes
 		}
 	}
 
-	public PT_Attributes(String uuidRoot)
+	public PT_Attributes()
 	{
-		super(uuidRoot);
+		super();
 		for (Attribute attr : Attribute.values())
 		{
 			addProperty(attr.getProperty());

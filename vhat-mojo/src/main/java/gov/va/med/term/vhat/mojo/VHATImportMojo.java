@@ -57,6 +57,7 @@ import org.ihtsdo.tk.dto.concept.component.description.TkDescription;
  */
 public class VHATImportMojo extends AbstractMojo
 {
+	private final String vhatNamespaceSeed_ = "gov.va.med.term.vhat";
 	private Map<String, List<RelationshipImportDTO>> relationshipMap = null;
 	private TerminologyDataReader importer_;
 	private EConceptUtility eConceptUtil_;
@@ -105,17 +106,11 @@ public class VHATImportMojo extends AbstractMojo
 	private HashSet<Long> conceptsWithNoDesignations = new HashSet<Long>();
 	private int mapEntryCount = 0;
 	private int mapSetCount = 0;
-	private String uuidRoot_ = "gov.va.med.term.vhat:";
+	
 	
 
 	public void execute() throws MojoExecutionException
 	{
-		ids_ = new PT_IDs(uuidRoot_);
-		attributes_ = new PT_Attributes(uuidRoot_);
-		descriptions_ = new BPT_Descriptions(uuidRoot_, "VHAT");
-		relationships_ = new BPT_Relations(uuidRoot_, "VHAT");
-		contentVersion_ = new PT_ContentVersion(uuidRoot_);
-
 		File f = outputDirectory;
 
 		try
@@ -128,7 +123,13 @@ public class VHATImportMojo extends AbstractMojo
 			File touch = new File(f, "VHATEConcepts.jbin");
 			DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(touch)));
 
-			eConceptUtil_ = new EConceptUtility(uuidRoot_, "VHAT Path", dos);
+			eConceptUtil_ = new EConceptUtility(vhatNamespaceSeed_, "VHAT Path", dos);
+			
+			ids_ = new PT_IDs();
+			attributes_ = new PT_Attributes();
+			descriptions_ = new BPT_Descriptions("VHAT");
+			relationships_ = new BPT_Relations("VHAT");
+			contentVersion_ = new PT_ContentVersion();
 
 			importer_ = new TerminologyDataReader(inputFile);
 			List<ConceptImportDTO> items = importer_.process();
@@ -459,17 +460,17 @@ public class VHATImportMojo extends AbstractMojo
 
 	public UUID getSubsetUuid(String vuid)
 	{
-		return ConverterUUID.nameUUIDFromBytes((uuidRoot_ + "subset:" + vuid).getBytes());
+		return ConverterUUID.createNamespaceUUIDFromString("subset:" + vuid);
 	}
 
 	public UUID getConceptUuid(String codeId)
 	{
-		return ConverterUUID.nameUUIDFromBytes((uuidRoot_ + "code:" + codeId).getBytes());
+		return ConverterUUID.createNamespaceUUIDFromString("code:" + codeId);
 	}
 
 	public UUID getDescriptionUuid(String descriptionId)
 	{
-		return ConverterUUID.nameUUIDFromBytes((uuidRoot_ + "description:" + descriptionId).getBytes());
+		return ConverterUUID.createNamespaceUUIDFromString("description:" + descriptionId);
 	}
 
 	public static void main(String[] args) throws MojoExecutionException

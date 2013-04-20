@@ -21,6 +21,7 @@ import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility.DescriptionType;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_ContentVersion.BaseContentVersion;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descriptions;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Refsets;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Relations;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.PropertyType;
@@ -67,6 +68,7 @@ public class VHATImportMojo extends AbstractMojo
 	private UUID rootConceptUUID;
 
 	private PropertyType attributes_, descriptions_, relationships_, ids_, contentVersion_;
+	private BPT_Refsets refsets_;
 
 	private EConcept allVhatConceptsRefset;
 
@@ -106,8 +108,6 @@ public class VHATImportMojo extends AbstractMojo
 	private HashSet<Long> conceptsWithNoDesignations = new HashSet<Long>();
 	private int mapEntryCount = 0;
 	private int mapSetCount = 0;
-	
-	
 
 	public void execute() throws MojoExecutionException
 	{
@@ -130,6 +130,8 @@ public class VHATImportMojo extends AbstractMojo
 			descriptions_ = new BPT_Descriptions("VHAT");
 			relationships_ = new BPT_Relations("VHAT");
 			contentVersion_ = new PT_ContentVersion();
+			refsets_ = new BPT_Refsets("VHAT");
+			refsets_.addProperty("All VHAT Concepts");
 
 			importer_ = new TerminologyDataReader(inputFile);
 			List<ConceptImportDTO> items = importer_.process();
@@ -138,10 +140,6 @@ public class VHATImportMojo extends AbstractMojo
 			List<TypeImportDTO> dto = importer_.getTypes();
 
 			EConcept vhatMetadata = createType(dos, ArchitectonicAuxiliary.Concept.ARCHITECTONIC_ROOT_CONCEPT.getPrimoridalUid(), "VHAT Metadata");
-
-			EConcept vaRefsets = eConceptUtil_.createVARefsetRootConcept();
-			loadedConcepts.put(vaRefsets.getPrimordialUuid().toString(), eConceptUtil_.VA_REFSET_NAME);
-			vaRefsets.writeExternal(dos);
 
 			// read in the dynamic types
 			for (TypeImportDTO typeImportDTO : dto)
@@ -184,13 +182,25 @@ public class VHATImportMojo extends AbstractMojo
 					}
 				}
 			}
+			
+			//get the refset names
+			for (SubsetImportDTO subset : importer_.getSubsets())
+			{
+				refsets_.addProperty(subset.getSubsetName());
+			}
 
-			eConceptUtil_.loadMetaDataItems(Arrays.asList(ids_, contentVersion_, descriptions_, attributes_, relationships_), vhatMetadata.getPrimordialUuid(), dos);
+			eConceptUtil_.loadMetaDataItems(Arrays.asList(ids_, contentVersion_, descriptions_, attributes_, relationships_, refsets_), vhatMetadata.getPrimordialUuid(), dos);
+			loadedConcepts.put(refsets_.getRefsetIdentityParent().getPrimordialUuid().toString(), eConceptUtil_.VA_REFSET_NAME);
 
-			EConcept subsetRefset = createType(dos, vaRefsets.primordialUuid, "VHAT Refsets");
+			ConsoleUtil.println("Metadata load stats");
+			for (String line : eConceptUtil_.getLoadStats().getSummary())
+			{
+				ConsoleUtil.println(line);
+			}
+			
+			eConceptUtil_.clearLoadStats();
 
-			// store this one later
-			allVhatConceptsRefset = eConceptUtil_.createConcept("All VHAT Concepts", subsetRefset.primordialUuid);
+			allVhatConceptsRefset = refsets_.getConcept("All VHAT Concepts");
 			loadedConcepts.put(allVhatConceptsRefset.getPrimordialUuid().toString(), "All VHAT Concepts");
 
 			Map<Long, Set<Long>> subsetMembershipMap = new HashMap<Long, Set<Long>>();
@@ -218,19 +228,15 @@ public class VHATImportMojo extends AbstractMojo
 			List<SubsetImportDTO> subsets = importer_.getSubsets();
 			for (SubsetImportDTO subset : subsets)
 			{
-				createType(dos, 
-						subsetRefset.getPrimordialUuid(), 
-						subset.getSubsetName(), 
-						getSubsetUuid(subset.getVuid() + ""), 
-						subsetMembershipMap.get(subset.getVuid()));
+				loadRefset(subset.getSubsetName(), subsetMembershipMap.get(subset.getVuid()));
 			}
 
 			for (ConceptImportDTO item : items)
 			{
 				writeEConcept(dos, item);
 			}
-
-			allVhatConceptsRefset.writeExternal(dos);
+			
+			eConceptUtil_.storeRefsetConcepts(refsets_, dos);
 
 			ArrayList<String> missingConcepts = new ArrayList<String>();
 
@@ -314,7 +320,7 @@ public class VHATImportMojo extends AbstractMojo
 
 	}
 
-	public void writeEConcept(DataOutputStream dos, ConceptImportDTO conceptDto) throws Exception
+	private void writeEConcept(DataOutputStream dos, ConceptImportDTO conceptDto) throws Exception
 	{
 		if (conceptDto instanceof MapEntryImportDTO)
 		{
@@ -426,12 +432,12 @@ public class VHATImportMojo extends AbstractMojo
 				}
 			}
 
-			eConceptUtil_.addRefsetMember(allVhatConceptsRefset, concept.getPrimordialUuid(), true, time);
+			eConceptUtil_.addRefsetMember(allVhatConceptsRefset, concept.getPrimordialUuid(), null, true, time);
 			concept.writeExternal(dos);
 		}
 	}
 
-	public EConcept createType(DataOutputStream dos, UUID parentUuid, String typeName) throws Exception
+	private EConcept createType(DataOutputStream dos, UUID parentUuid, String typeName) throws Exception
 	{
 		EConcept concept = eConceptUtil_.createConcept(typeName);
 		loadedConcepts.put(concept.getPrimordialUuid().toString(), typeName);
@@ -440,35 +446,26 @@ public class VHATImportMojo extends AbstractMojo
 		return concept;
 	}
 
-	public EConcept createType(DataOutputStream dos, UUID parentUuid, String typeName, UUID typeUuid, Set<Long> refsetMembership) throws Exception
+	private void loadRefset(String typeName, Set<Long> refsetMembership) throws Exception
 	{
-		EConcept concept = eConceptUtil_.createConcept(typeUuid, typeName, null, eConceptUtil_.statusCurrentUuid_);
+		EConcept concept = refsets_.getConcept(typeName);
 		loadedConcepts.put(concept.getPrimordialUuid().toString(), typeName);
-		eConceptUtil_.addRelationship(concept, parentUuid);
 
 		if (refsetMembership != null)
 		{
 			for (Long memberVuid : refsetMembership)
 			{
-				eConceptUtil_.addRefsetMember(concept, getDescriptionUuid(memberVuid.toString()), true, null);
+				eConceptUtil_.addRefsetMember(concept, getDescriptionUuid(memberVuid.toString()), null, true, null);
 			}
 		}
-
-		concept.writeExternal(dos);
-		return concept;
 	}
 
-	public UUID getSubsetUuid(String vuid)
-	{
-		return ConverterUUID.createNamespaceUUIDFromString("subset:" + vuid);
-	}
-
-	public UUID getConceptUuid(String codeId)
+	private UUID getConceptUuid(String codeId)
 	{
 		return ConverterUUID.createNamespaceUUIDFromString("code:" + codeId);
 	}
 
-	public UUID getDescriptionUuid(String descriptionId)
+	private UUID getDescriptionUuid(String descriptionId)
 	{
 		return ConverterUUID.createNamespaceUUIDFromString("description:" + descriptionId);
 	}

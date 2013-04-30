@@ -332,7 +332,7 @@ public class VHATImportMojo extends AbstractMojo
 		}
 		else
 		{
-			long time = System.currentTimeMillis();
+			long time = eConceptUtil_.defaultTime_;
 
 			EConcept concept = eConceptUtil_.createConcept(getConceptUuid(conceptDto.getVuid().toString()), time, eConceptUtil_.statusCurrentUuid_);
 			loadedConcepts.put(concept.getPrimordialUuid().toString(), conceptDto.getVuid().toString());

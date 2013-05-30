@@ -462,12 +462,12 @@ public class VHATImportMojo extends AbstractMojo
 
 	private UUID getConceptUuid(String codeId)
 	{
-		return ConverterUUID.createNamespaceUUIDFromString("code:" + codeId);
+		return ConverterUUID.createNamespaceUUIDFromString("code:" + codeId, true);
 	}
 
 	private UUID getDescriptionUuid(String descriptionId)
 	{
-		return ConverterUUID.createNamespaceUUIDFromString("description:" + descriptionId);
+		return ConverterUUID.createNamespaceUUIDFromString("description:" + descriptionId, true);
 	}
 
 	public static void main(String[] args) throws MojoExecutionException

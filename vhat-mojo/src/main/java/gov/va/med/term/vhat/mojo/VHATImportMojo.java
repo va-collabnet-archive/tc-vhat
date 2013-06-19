@@ -365,6 +365,7 @@ public class VHATImportMojo extends AbstractMojo
 					// On the root node, we need to add some extra attributes
 					eConceptUtil_.addDescription(concept, "VHAT", DescriptionType.SYNONYM, true, null, null, false);
 					eConceptUtil_.addDescription(concept, "VHA Terminology", DescriptionType.SYNONYM, false, null, null, false);
+					ConsoleUtil.println("Root concept FSN is 'VHAT' and the UUID is " + concept.getPrimordialUuid());
 					Version version = importer_.getVersion();
 					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 					eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), ContentVersion.RELEASE_DATE.getProperty().getUUID(), false);

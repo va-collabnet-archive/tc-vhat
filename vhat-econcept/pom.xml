@@ -3,14 +3,14 @@
 	<parent>
 		<groupId>gov.va.oia.terminology.converters</groupId>
 		<artifactId>vhat</artifactId>
-		<version>2.3</version>
+		<version>2.4-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>vhat-econcept</artifactId>
 	<packaging>pom</packaging>
 	<name>vhat-econcept</name>
 	<!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
-	<version>2013.02.11-loader-2.3</version>
+	<version>2013.02.11-loader-2.4-SNAPSHOT</version>
 
 	<properties>
 		<sourceData.version>2013.02.11</sourceData.version>

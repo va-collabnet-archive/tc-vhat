@@ -19,7 +19,6 @@ import gov.va.med.term.vhat.propertyTypes.PT_IDs;
 import gov.va.oia.terminology.converters.sharedUtils.ConsoleUtil;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility.DescriptionType;
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_ContentVersion.BaseContentVersion;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descriptions;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Refsets;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Relations;
@@ -67,7 +66,8 @@ public class VHATImportMojo extends AbstractMojo
 	private HashMap<String, String> loadedConcepts = new HashMap<String, String>();
 	private UUID rootConceptUUID;
 
-	private PropertyType attributes_, descriptions_, relationships_, ids_, contentVersion_;
+	private PropertyType attributes_, descriptions_, relationships_, ids_;
+	private PT_ContentVersion contentVersion_;
 	private BPT_Refsets refsets_;
 
 	private EConcept allVhatConceptsRefset;
@@ -369,8 +369,8 @@ public class VHATImportMojo extends AbstractMojo
 					Version version = importer_.getVersion();
 					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 					eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), ContentVersion.RELEASE_DATE.getProperty().getUUID(), false);
-					eConceptUtil_.addStringAnnotation(concept, releaseVersion, BaseContentVersion.RELEASE.getProperty().getUUID(), false);
-					eConceptUtil_.addStringAnnotation(concept, loaderVersion, BaseContentVersion.LOADER_VERSION.getProperty().getUUID(), false);
+					eConceptUtil_.addStringAnnotation(concept, releaseVersion, contentVersion_.RELEASE.getUUID(), false);
+					eConceptUtil_.addStringAnnotation(concept, loaderVersion, contentVersion_.LOADER_VERSION.getUUID(), false);
 					rootConceptUUID = concept.getPrimordialUuid();
 				}
 				eConceptUtil_.addAdditionalIds(desc, vpp.getDesignationImportDTO().getVuid(), ids_.getProperty("VUID").getUUID());

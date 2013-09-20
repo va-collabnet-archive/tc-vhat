@@ -190,7 +190,7 @@ public class VHATImportMojo extends AbstractMojo
 			}
 
 			eConceptUtil_.loadMetaDataItems(Arrays.asList(ids_, contentVersion_, descriptions_, attributes_, relationships_, refsets_), vhatMetadata.getPrimordialUuid(), dos);
-			loadedConcepts.put(refsets_.getRefsetIdentityParent().getPrimordialUuid().toString(), eConceptUtil_.VA_REFSET_NAME);
+			loadedConcepts.put(refsets_.getRefsetIdentityParent().getPrimordialUuid().toString(), eConceptUtil_.PROJECT_REFSETS_NAME);
 
 			ConsoleUtil.println("Metadata load stats");
 			for (String line : eConceptUtil_.getLoadStats().getSummary())

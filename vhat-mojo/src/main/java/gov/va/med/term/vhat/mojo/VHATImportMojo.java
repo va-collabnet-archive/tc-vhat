@@ -11,21 +11,23 @@ import gov.va.med.term.vhat.data.dto.SubsetImportDTO;
 import gov.va.med.term.vhat.data.dto.SubsetMembershipImportDTO;
 import gov.va.med.term.vhat.data.dto.TypeImportDTO;
 import gov.va.med.term.vhat.data.dto.Version;
-import gov.va.med.term.vhat.propertyTypes.PT_Attributes;
-import gov.va.med.term.vhat.propertyTypes.PT_Attributes.Attribute;
+import gov.va.med.term.vhat.propertyTypes.PT_Annotations;
+import gov.va.med.term.vhat.propertyTypes.PT_Annotations.Attribute;
 import gov.va.med.term.vhat.propertyTypes.PT_ContentVersion;
 import gov.va.med.term.vhat.propertyTypes.PT_ContentVersion.ContentVersion;
 import gov.va.med.term.vhat.propertyTypes.PT_IDs;
 import gov.va.oia.terminology.converters.sharedUtils.ConsoleUtil;
+import gov.va.oia.terminology.converters.sharedUtils.ConverterBaseMojo;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility;
 import gov.va.oia.terminology.converters.sharedUtils.EConceptUtility.DescriptionType;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Descriptions;
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Refsets;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_MemberRefsets;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Relations;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.PropertyType;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.ValuePropertyPair;
 import gov.va.oia.terminology.converters.sharedUtils.stats.ConverterUUID;
+
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -42,20 +44,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.maven.plugin.AbstractMojo;
+
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
 import org.dwfa.cement.ArchitectonicAuxiliary;
 import org.ihtsdo.etypes.EConcept;
 import org.ihtsdo.tk.dto.concept.component.description.TkDescription;
 
 /**
  * Goal which converts VHAT data into the workbench jbin format
- * 
- * @goal convert-vhat-data
- * 
- * @phase process-sources
  */
-public class VHATImportMojo extends AbstractMojo
+@Mojo (name = "convert-vhat-data", defaultPhase = LifecyclePhase.PROCESS_SOURCES)
+public class VHATImportMojo extends ConverterBaseMojo
 {
 	private final String vhatNamespaceSeed_ = "gov.va.med.term.vhat";
 	private Map<String, List<RelationshipImportDTO>> relationshipMap = null;
@@ -68,47 +69,15 @@ public class VHATImportMojo extends AbstractMojo
 
 	private PropertyType attributes_, descriptions_, relationships_, ids_;
 	private PT_ContentVersion contentVersion_;
-	private BPT_Refsets refsets_;
+	private BPT_MemberRefsets refsets_;
 
 	private EConcept allVhatConceptsRefset;
-
-	/**
-	 * Where to put the output file.
-	 * 
-	 * @parameter expression="${project.build.directory}"
-	 * @required
-	 */
-
-	private File outputDirectory;
-	/**
-	 * Location of source data file. May be a file or a directory.
-	 * 
-	 * @parameter
-	 * @required
-	 */
-	private File inputFile;
-
-	/**
-	 * Loader version number
-	 * Use parent because project.version pulls in the version of the data file, which I don't want.
-	 * 
-	 * @parameter expression="${project.parent.version}"
-	 * @required
-	 */
-	private String loaderVersion;
-
-	/**
-	 * Content version number
-	 * 
-	 * @parameter expression="${project.version}"
-	 * @required
-	 */
-	private String releaseVersion;
 
 	private HashSet<Long> conceptsWithNoDesignations = new HashSet<Long>();
 	private int mapEntryCount = 0;
 	private int mapSetCount = 0;
 
+	@Override
 	public void execute() throws MojoExecutionException
 	{
 		File f = outputDirectory;
@@ -122,18 +91,20 @@ public class VHATImportMojo extends AbstractMojo
 
 			File touch = new File(f, "VHATEConcepts.jbin");
 			DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(touch)));
+			
+			String temp = converterResultVersion.substring(0, 11);
 
-			eConceptUtil_ = new EConceptUtility(vhatNamespaceSeed_, "VHAT Path", dos);
+			eConceptUtil_ = new EConceptUtility(vhatNamespaceSeed_, "VHAT Path", dos, new SimpleDateFormat("yyyy.MM.dd").parse(temp).getTime());
 			
 			ids_ = new PT_IDs();
-			attributes_ = new PT_Attributes();
+			attributes_ = new PT_Annotations();
 			descriptions_ = new BPT_Descriptions("VHAT");
 			relationships_ = new BPT_Relations("VHAT");
 			contentVersion_ = new PT_ContentVersion();
-			refsets_ = new BPT_Refsets("VHAT");
+			refsets_ = new BPT_MemberRefsets("VHAT");
 			refsets_.addProperty("All VHAT Concepts");
 
-			importer_ = new TerminologyDataReader(inputFile);
+			importer_ = new TerminologyDataReader(inputFileLocation);
 			List<ConceptImportDTO> items = importer_.process();
 
 			relationshipMap = importer_.getRelationshipsMap();
@@ -298,7 +269,7 @@ public class VHATImportMojo extends AbstractMojo
 
 			// this could be removed from final release. Just added to help debug editor problems.
 			ConsoleUtil.println("Dumping UUID Debug File");
-			ConverterUUID.dump(new File(outputDirectory, "vhatUuidDebugMap.txt"));
+			ConverterUUID.dump(outputDirectory, "vhatUuid");
 
 			if (conceptsWithNoDesignations.size() > 0)
 			{
@@ -369,7 +340,7 @@ public class VHATImportMojo extends AbstractMojo
 					Version version = importer_.getVersion();
 					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 					eConceptUtil_.addStringAnnotation(concept, sdf.format(version.getReleaseDate()), ContentVersion.RELEASE_DATE.getProperty().getUUID(), false);
-					eConceptUtil_.addStringAnnotation(concept, releaseVersion, contentVersion_.RELEASE.getUUID(), false);
+					eConceptUtil_.addStringAnnotation(concept, converterResultVersion, contentVersion_.RELEASE.getUUID(), false);
 					eConceptUtil_.addStringAnnotation(concept, loaderVersion, contentVersion_.LOADER_VERSION.getUUID(), false);
 					rootConceptUUID = concept.getPrimordialUuid();
 				}
@@ -383,8 +354,13 @@ public class VHATImportMojo extends AbstractMojo
 					{
 						//Don't need to worry about running these through the auto-sorter description add method - these will never need to be promoted to FSN
 						//since they only exist under other descriptions.
-						TkDescription searchTermDesc = eConceptUtil_.addDescription(concept, property.getValueNew(), DescriptionType.SYNONYM, false,
-								descriptions_.getProperty(property.getTypeName()).getUUID(), 
+						
+						UUID descriptionPrimordialUUID = ConverterUUID.createNamespaceUUIDFromStrings(concept.getPrimordialUuid().toString(), property.getValueNew(), 
+								DescriptionType.SYNONYM.name(), false + "", descriptions_.getProperty(property.getTypeName()).getUUID().toString(), 
+								vpp.getDesignationImportDTO().getVuid() + "");  //Need to put the VUID into the UUID gen for the descriptions to prevent duplicates
+						
+						TkDescription searchTermDesc = eConceptUtil_.addDescription(concept, descriptionPrimordialUUID, property.getValueNew(), DescriptionType.SYNONYM, 
+								false, descriptions_.getProperty(property.getTypeName()).getUUID(), 
 								descriptions_.getProperty(property.getTypeName()).getPropertyType().getPropertyTypeReferenceSetUUID(), !property.isActive());
 						// Annotate which description it came from
 						eConceptUtil_.addStringAnnotation(searchTermDesc, vpp.getDesignationImportDTO().getVuid() + "", 
@@ -477,7 +453,7 @@ public class VHATImportMojo extends AbstractMojo
 	{
 		VHATImportMojo i = new VHATImportMojo();
 		i.outputDirectory = new File("../vhat-econcept/target");
-		i.inputFile = new File("../vhat-econcept/target/generated-resources/xml/");
+		i.inputFileLocation = new File("../vhat-econcept/target/generated-resources/xml/");
 		i.execute();
 	}
 	

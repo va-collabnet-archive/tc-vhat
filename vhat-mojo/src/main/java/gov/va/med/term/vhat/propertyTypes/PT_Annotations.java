@@ -1,9 +1,9 @@
 package gov.va.med.term.vhat.propertyTypes;
 
-import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Attributes;
+import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.BPT_Annotations;
 import gov.va.oia.terminology.converters.sharedUtils.propertyTypes.Property;
 
-public class PT_Attributes extends BPT_Attributes
+public class PT_Annotations extends BPT_Annotations
 {
 	public enum Attribute
 	{
@@ -23,7 +23,7 @@ public class PT_Attributes extends BPT_Attributes
 		}
 	}
 
-	public PT_Attributes()
+	public PT_Annotations()
 	{
 		super();
 		for (Attribute attr : Attribute.values())

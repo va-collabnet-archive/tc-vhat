@@ -9,11 +9,12 @@
 	<artifactId>vhat-econcept</artifactId>
 	<packaging>pom</packaging>
 	<name>vhat-econcept</name>
-	<!-- this should be set to ${sourceData.version}-loader-${project.parent.version} but that doesn't appease the maven gods that know best.... -->
+	<!-- this should be set to ${sourceData.version}-loader-${loader.version} but that doesn't appease the maven gods that know best.... -->
 	<version>2014.06.02-loader-2.5</version>
 
 	<properties>
 		<sourceData.version>2014.06.02</sourceData.version>
+		<loader.version>2.5</loader.version>
 	</properties>
 
 	<build>
@@ -72,10 +73,10 @@
 						<id>convert-VHAT-to-jbin</id>
 						<configuration>
 							<!-- Use this to process a local file (optionally, comment out the fetch VHAT XML data section above as well) -->
-							<!--<inputFile>/mnt/d/Documents/Desktop/vhat.xml</inputFile>-->
+							<!--<inputFileLocation>/mnt/d/Documents/Desktop/vhat.xml</inputFileLocation>-->
 
 							<!-- Use this to process whatever XML file comes out of the zip file found in the fetch-VHAT-XML-data process -->
-							<inputFile>${project.build.directory}/generated-resources/xml</inputFile>
+							<inputFileLocation>${project.build.directory}/generated-resources/xml</inputFileLocation>
 						</configuration>
 						<goals>
 							<goal>convert-vhat-data</goal>

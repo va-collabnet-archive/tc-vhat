@@ -4,7 +4,7 @@
 
 	<groupId>gov.va.oia.terminology.source.vhat</groupId>
 	<artifactId>vhat-src-data</artifactId>
-	<version>2014.06.02</version>
+	<version>2015.06.22</version>
 	<packaging>pom</packaging>
 
 	<name>vhat-src-data</name>

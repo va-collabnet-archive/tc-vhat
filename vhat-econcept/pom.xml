@@ -4,14 +4,14 @@
 	<groupId>gov.va.oia.terminology.converters</groupId>
 	<artifactId>vhat-econcept</artifactId>
 	<!-- this should be set to ${sourceData.version}-loader-${loader.version} but that doesn't appease the maven gods that know best.... -->
-	<version>2015.06.22-loader-3.0</version>
+	<version>2015.06.22-loader-3.1-SNAPSHOT</version>
 	
 	<packaging>pom</packaging>
 	<name>vhat-econcept</name>
 	
 	<properties>
 		<sourceData.version>2015.06.22</sourceData.version>
-		<loader.version>3.0</loader.version>
+		<loader.version>3.1-SNAPSHOT</loader.version>
 	</properties>
 
 	<build>

@@ -4,14 +4,14 @@
 
 	<groupId>gov.va.oia.terminology.converters</groupId>
 	<artifactId>vhat-mojo</artifactId>
-	<version>3.0</version>
+	<version>3.1-SNAPSHOT</version>
 	
 	<packaging>maven-plugin</packaging>
 	<name>vhat-mojo</name>
 	
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<convertersCommonCode.version>3.0</convertersCommonCode.version>
+		<convertersCommonCode.version>3.1-SNAPSHOT</convertersCommonCode.version>
 	</properties>
 
 	<scm>
